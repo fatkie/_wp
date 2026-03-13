@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>問卷調查表</title>
+
+<style>
+body{
+    font-family: Arial;
+    background:#f5f5f5;
+}
+
+form{
+    width:600px;
+    margin:auto;
+    background:white;
+    padding:20px;
+    border-radius:10px;
+    box-shadow:0 0 10px gray;
+}
+
+h2{
+    text-align:center;
+}
+
+label{
+    display:block;
+    margin-top:10px;
+}
+
+input,select,textarea{
+    width:100%;
+    padding:5px;
+    margin-top:5px;
+}
+
+.radio-group,
+.checkbox-group{
+    width:auto;
+}
+
+button{
+    margin-top:15px;
+}
+</style>
+
+</head>
+<body>
+
+<form>
+
+<h2>使用者問卷調查</h2>
+
+<!-- hidden -->
+<input type="hidden" name="formID" value="001">
+
+<label>姓名</label>
+<input type="text" name="name" placeholder="請輸入姓名">
+
+<label>密碼</label>
+<input type="password" name="password">
+
+<label>Email</label>
+<input type="email" name="email" placeholder="example@gmail.com">
+
+<label>電話</label>
+<input type="tel" name="phone">
+
+<label>年齡</label>
+<input type="number" name="age" min="1" max="100">
+
+<label>生日</label>
+<input type="date" name="birthday">
+
+<label>現在時間</label>
+<input type="time" name="time">
+
+<label>預約時間</label>
+<input type="datetime-local" name="datetime">
+
+<label>個人網站</label>
+<input type="url" name="website">
+
+<label>搜尋興趣</label>
+<input type="search" name="interest">
+
+<label>喜歡的顏色</label>
+<input type="color" name="color">
+
+<label>滿意度 (0~10)</label>
+<input type="range" name="score" min="0" max="10">
+
+<label>上傳照片</label>
+<input type="file" name="photo">
+
+<label>性別</label>
+<div class="radio-group">
+<input type="radio" name="gender" value="male"> 男
+<input type="radio" name="gender" value="female"> 女
+<input type="radio" name="gender" value="other"> 其他
+</div>
+
+<label>興趣</label>
+<div class="checkbox-group">
+<input type="checkbox" name="hobby" value="game"> 打遊戲
+<input type="checkbox" name="hobby" value="music"> 聽音樂
+<input type="checkbox" name="hobby" value="movie"> 看電影
+<input type="checkbox" name="hobby" value="sport"> 運動
+</div>
+
+<label>居住地</label>
+<select name="city">
+<option>台北</option>
+<option>台中</option>
+<option>高雄</option>
+<option>其他</option>
+</select>
+
+<label>意見回饋</label>
+<textarea rows="4" placeholder="請輸入您的意見"></textarea>
+
+<br>
+
+<input type="submit" value="送出問卷">
+<input type="reset" value="重新填寫">
+<button type="button" onclick="alert('這是一個按鈕')">一般按鈕</button>
+
+</form>
+
+</body>
+</html>
