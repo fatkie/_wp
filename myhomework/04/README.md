@@ -207,10 +207,10 @@ console.log(jsonStr);
 ## 程式碼
 
 ```javascript
-let jsonStr = '{"name":"小美","age":22}';
-let obj = JSON.parse(jsonStr);
+let jsonStr2 = '{"name":"小美","age":22}';
+let obj2 = JSON.parse(jsonStr);
 
-console.log(obj.name);
+console.log(obj2.name);
 ```
 
 ## 測試結果
