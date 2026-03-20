@@ -1,18 +1,19 @@
 ## 習題4
 
 ## 摘要
+好，這次我直接幫你整理完整 **10 題（每題都有：題目 + 程式碼 + 測試結果）**，而且會涵蓋你要求的所有重點：
+✔ if / for / while / function / array / object / JSON
+✔ 每題都有測試結果
+
 ---
 
-# 📘 JavaScript 練習題（1～10）
+# ✅ 第 1 題：判斷成績等第（if + function）
 
----
+## 題目
 
-## 🧩 題目 1：判斷成績等級（if）
+輸入分數，回傳等第。
 
-**說明：**
-輸入一個分數，判斷等級（A/B/C/D/F）
-
-### ✅ 解答：
+## 程式碼
 
 ```javascript
 function getGrade(score) {
@@ -23,215 +24,265 @@ function getGrade(score) {
     else return "F";
 }
 
-console.log(getGrade(85)); // B
+console.log(getGrade(85));
+```
+
+## 測試結果
+
+```
+B
 ```
 
 ---
 
-## 🧩 題目 2：1~100 加總（for）
+# ✅ 第 2 題：計算陣列總和（array + for）
 
-**說明：**
-用 for 迴圈算總和
+## 題目
 
-### ✅ 解答：
+用 for 迴圈計算陣列總和。
 
-```javascript
-let sum = 0;
-
-for (let i = 1; i <= 100; i++) {
-    sum += i;
-}
-
-console.log(sum); // 5050
-```
-
----
-
-## 🧩 題目 3：猜數字（while）
-
-**說明：**
-模擬猜數字直到猜中
-
-### ✅ 解答：
+## 程式碼
 
 ```javascript
-let target = 7;
-let guess = 0;
-
-while (guess !== target) {
-    guess++;
-    console.log("猜：" + guess);
-}
-
-console.log("猜對了！");
-```
-
----
-
-## 🧩 題目 4：陣列找最大值（array + for）
-
-**說明：**
-找出陣列最大值
-
-### ✅ 解答：
-
-```javascript
-let arr = [5, 12, 8, 20, 3];
-let max = arr[0];
-
-for (let i = 1; i < arr.length; i++) {
-    if (arr[i] > max) {
-        max = arr[i];
+function sumArray(arr) {
+    let sum = 0;
+    for (let i = 0; i < arr.length; i++) {
+        sum += arr[i];
     }
+    return sum;
 }
 
-console.log(max); // 20
+console.log(sumArray([1, 2, 3, 4, 5]));
+```
+
+## 測試結果
+
+```
+15
 ```
 
 ---
 
-## 🧩 題目 5：物件資料處理（object）
+# ✅ 第 3 題：找最大值（array + for + if）
 
-**說明：**
-建立一個學生物件並輸出
+## 題目
 
-### ✅ 解答：
+找出陣列最大值。
+
+## 程式碼
+
+```javascript
+function maxNumber(arr) {
+    let max = arr[0];
+    for (let i = 1; i < arr.length; i++) {
+        if (arr[i] > max) {
+            max = arr[i];
+        }
+    }
+    return max;
+}
+
+console.log(maxNumber([3, 9, 2, 7]));
+```
+
+## 測試結果
+
+```
+9
+```
+
+---
+
+# ✅ 第 4 題：while 倒數計時（while）
+
+## 題目
+
+用 while 印出 5 到 1。
+
+## 程式碼
+
+```javascript
+let i = 5;
+while (i > 0) {
+    console.log(i);
+    i--;
+}
+```
+
+## 測試結果
+
+```
+5
+4
+3
+2
+1
+```
+
+---
+
+# ✅ 第 5 題：判斷偶數（if）
+
+## 題目
+
+判斷數字是否為偶數。
+
+## 程式碼
+
+```javascript
+function isEven(num) {
+    if (num % 2 === 0) return true;
+    else return false;
+}
+
+console.log(isEven(4));
+```
+
+## 測試結果
+
+```
+true
+```
+
+---
+
+# ✅ 第 6 題：物件操作（object）
+
+## 題目
+
+建立一個學生物件並印出姓名。
+
+## 程式碼
 
 ```javascript
 let student = {
-    name: "Tom",
+    name: "小明",
     age: 18,
     score: 90
 };
 
 console.log(student.name);
-console.log(student.score);
+```
+
+## 測試結果
+
+```
+小明
 ```
 
 ---
 
-## 🧩 題目 6：JSON 轉換
+# ✅ 第 7 題：JSON 轉換（JSON）
 
-**說明：**
-物件轉 JSON，再轉回來
+## 題目
 
-### ✅ 解答：
+將物件轉成 JSON 字串。
+
+## 程式碼
 
 ```javascript
-let obj = { name: "Amy", age: 20 };
+let obj = {
+    name: "小華",
+    age: 20
+};
 
-// 轉 JSON
 let jsonStr = JSON.stringify(obj);
 console.log(jsonStr);
+```
 
-// 轉回物件
-let newObj = JSON.parse(jsonStr);
-console.log(newObj.name);
+## 測試結果
+
+```
+{"name":"小華","age":20}
 ```
 
 ---
 
-## 🧩 題目 7：計算偶數個數（for + if）
+# ✅ 第 8 題：JSON 解析（JSON）
 
-**說明：**
-找出陣列中有幾個偶數
+## 題目
 
-### ✅ 解答：
+把 JSON 字串轉回物件。
+
+## 程式碼
 
 ```javascript
-let nums = [1, 2, 3, 4, 5, 6];
-let count = 0;
+let jsonStr = '{"name":"小美","age":22}';
+let obj = JSON.parse(jsonStr);
 
-for (let i = 0; i < nums.length; i++) {
-    if (nums[i] % 2 === 0) {
-        count++;
+console.log(obj.name);
+```
+
+## 測試結果
+
+```
+小美
+```
+
+---
+
+# ✅ 第 9 題：計算階乘（function + while）
+
+## 題目
+
+用 while 計算 n!。
+
+## 程式碼
+
+```javascript
+function factorial(n) {
+    let result = 1;
+    while (n > 0) {
+        result *= n;
+        n--;
     }
+    return result;
 }
 
-console.log(count); // 3
+console.log(factorial(5));
+```
+
+## 測試結果
+
+```
+120
 ```
 
 ---
 
-## 🧩 題目 8：函式計算平方（function）
+# ✅ 第 10 題：統計陣列偶數數量（array + for + if）
 
-**說明：**
-寫一個函式回傳平方
+## 題目
 
-### ✅ 解答：
+算出陣列中有幾個偶數。
+
+## 程式碼
 
 ```javascript
-function square(n) {
-    return n * n;
+function countEven(arr) {
+    let count = 0;
+    for (let num of arr) {
+        if (num % 2 === 0) {
+            count++;
+        }
+    }
+    return count;
 }
 
-console.log(square(5)); // 25
+console.log(countEven([1, 2, 3, 4, 6]));
+```
+
+## 測試結果
+
+```
+3
 ```
 
 ---
 
-## 🧩 題目 9：反轉陣列（array + while）
+# 📌 下一步（很重要）
 
-**說明：**
-用 while 反轉陣列
+你作業還有一個要求👇
+👉 要寫 `README.md（Markdown）`
 
-### ✅ 解答：
-
-```javascript
-let arr = [1, 2, 3, 4];
-let reversed = [];
-
-let i = arr.length - 1;
-
-while (i >= 0) {
-    reversed.push(arr[i]);
-    i--;
-}
-
-console.log(reversed); // [4,3,2,1]
-```
-
----
-
-## 🧩 題目 10：多學生平均（object + array）
-
-**說明：**
-計算學生平均分數
-
-### ✅ 解答：
-
-```javascript
-let students = [
-    { name: "A", score: 80 },
-    { name: "B", score: 90 },
-    { name: "C", score: 70 }
-];
-
-let total = 0;
-
-for (let i = 0; i < students.length; i++) {
-    total += students[i].score;
-}
-
-let avg = total / students.length;
-
-console.log(avg); // 80
-```
-
----
-
-# 📌 小總結
-
-這 10 題已經完整包含你要求的：
-
-✔ if
-✔ for
-✔ while
-✔ function
-✔ array
-✔ object
-✔ JSON
-
----
-
-如果你下一步要做老師要求的版本，我可以幫你再加一個 👉 README.md（Markdown 格式）或改成「作業可交版本」。
+如果你要，我可以幫你直接做一份 **可交作業用 README.md（超加分版）** 😎
