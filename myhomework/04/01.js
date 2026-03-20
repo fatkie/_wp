@@ -1,10 +1,9 @@
-function checkPass(score) {
-    if (score >= 60) {
-        return "及格";
-    } else {
-        return "不及格";
-    }
+function getGrade(score) {
+    if (score >= 90) return "A";
+    else if (score >= 80) return "B";
+    else if (score >= 70) return "C";
+    else if (score >= 60) return "D";
+    else return "F";
 }
 
-console.log(checkPass(75)); // 及格
-console.log(checkPass(50)); // 不及格
+console.log(getGrade(85));

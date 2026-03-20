@@ -30,6 +30,7 @@ console.log(getGrade(85));
 ## 測試結果
 
 ```
+PS D:\fatkie\_wp\myhomework\04> node 01.js
 B
 ```
 
@@ -58,6 +59,7 @@ console.log(sumArray([1, 2, 3, 4, 5]));
 ## 測試結果
 
 ```
+PS D:\fatkie\_wp\myhomework\04> node 02.js
 15
 ```
 
@@ -88,6 +90,7 @@ console.log(maxNumber([3, 9, 2, 7]));
 ## 測試結果
 
 ```
+PS D:\fatkie\_wp\myhomework\04> node 03.js
 9
 ```
 
@@ -112,6 +115,7 @@ while (i > 0) {
 ## 測試結果
 
 ```
+PS D:\fatkie\_wp\myhomework\04> node 04.js
 5
 4
 3
@@ -141,6 +145,7 @@ console.log(isEven(4));
 ## 測試結果
 
 ```
+PS D:\fatkie\_wp\myhomework\04> node 05.js
 true
 ```
 
@@ -167,6 +172,7 @@ console.log(student.name);
 ## 測試結果
 
 ```
+PS D:\fatkie\_wp\myhomework\04> node 06.js
 小明
 ```
 
@@ -193,6 +199,7 @@ console.log(jsonStr);
 ## 測試結果
 
 ```
+PS D:\fatkie\_wp\myhomework\04> node 07.js
 {"name":"小華","age":20}
 ```
 
@@ -207,15 +214,16 @@ console.log(jsonStr);
 ## 程式碼
 
 ```javascript
-let jsonStr2 = '{"name":"小美","age":22}';
-let obj2 = JSON.parse(jsonStr);
+let jsonStr = '{"name":"小美","age":22}';
+let obj = JSON.parse(jsonStr);
 
-console.log(obj2.name);
+console.log(obj.name);
 ```
 
 ## 測試結果
 
 ```
+PS D:\fatkie\_wp\myhomework\04> node 08.js
 小美
 ```
 
@@ -245,6 +253,7 @@ console.log(factorial(5));
 ## 測試結果
 
 ```
+PS D:\fatkie\_wp\myhomework\04> node 09.js
 120
 ```
 
@@ -275,6 +284,7 @@ console.log(countEven([1, 2, 3, 4, 6]));
 ## 測試結果
 
 ```
+PS D:\fatkie\_wp\myhomework\04> node 10.js
 3
 ```
 
