@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>My Blog</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+    h1 a { color: #333; text-decoration: none; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .user-info { color: #666; }
+    .post { border: 1px solid #ddd; padding: 15px; margin: 15px 0; border-radius: 5px; }
+    .post h2 { margin-top: 0; }
+    .post .date { color: #666; font-size: 0.9em; }
+    .post .author { color: #666; font-size: 0.9em; }
+    .btn { display: inline-block; padding: 8px 15px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; }
+    .btn-delete { background: #dc3545; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1><a href="/">My Blog</a></h1>
+    <div class="user-info">
+      <% if (user) { %>
+        <span>Hello, <%= user.username %></span>
+        <a href="/new" class="btn">New Post</a>
+        <a href="/logout" class="btn" style="background: #6c757d;">Logout</a>
+      <% } else { %>
+        <a href="/login" class="btn" style="background: #28a745;">Login</a>
+        <a href="/register" class="btn">Register</a>
+      <% } %>
+    </div>
+  </div>
+  
+  <% posts.forEach(post => { %>
+    <div class="post">
+      <h2><a href="/post/<%= post.id %>"><%= post.title %></a></h2>
+      <p class="date"><%= post.created_at %> | By <%= post.username %></p>
+      <p><%= post.content.substring(0, 200) %><%= post.content.length > 200 ? '...' : '' %></p>
+      <a href="/post/<%= post.id %>" class="btn">Read more</a>
+      <% if (user && user.id === post.user_id) { %>
+        <a href="/delete/<%= post.id %>" class="btn btn-delete" onclick="return confirm('Delete?')">Delete</a>
+      <% } %>
+    </div>
+  <% }) %>
+  
+  <% if (posts.length === 0) { %>
+    <p>No posts yet.</p>
+  <% } %>
+</body>
+</html>
