@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>節奏遊戲 - 雲端排行榜網頁版</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; background-color: #111; color: #fff; font-family: Arial, "Noto Sans TC", sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 10px; }
+        canvas { background-color: #1a1a1a; border: 3px solid #444; box-shadow: 0 0 20px rgba(0,0,0,0.8); max-width: 100%; }
+        .panel { background: #333; padding: 15px; border-radius: 8px; border: 1px solid #444; margin: 10px; }
+
+        #topBar { display: flex; justify-content: space-between; width: min(100%, 1000px); margin-top: 10px; }
+        #authPanel { background: #2c3e50; padding: 10px; border-radius: 8px; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        #loginForm { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+        .controls { background: #444; padding: 10px; border-radius: 5px; margin: 10px 0; text-align: left; }
+        .controls label { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 16px; white-space: nowrap; }
+        select, input { padding: 5px; font-size: 14px; }
+        input[type="file"] { max-width: 260px; }
+        button { padding: 8px 15px; border-radius: 4px; border: none; background-color: #e74c3c; color: white; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { background-color: #c0392b; transform: scale(1.05); }
+        button:active { transform: scale(0.95); }
+        button:disabled { background-color: #7f8c8d; cursor: not-allowed; transform: none; }
+
+        .flex-container { display: flex; gap: 20px; align-items: flex-start; justify-content: center; width: 100%; margin-top: 10px; flex-wrap: wrap; }
+        .side-panel { width: 280px; }
+        .game-wrap { position: relative; width: 400px; height: 600px; max-width: 100%; }
+
+        .lb-container { background: #222; padding: 10px; border-radius: 5px; min-height: 200px; }
+        .rank-item { display: flex; justify-content: space-between; gap: 10px; padding: 5px; border-bottom: 1px solid #444; }
+        .rank-1 { color: #f1c40f; font-weight: bold; }
+        .rank-2 { color: #bdc3c7; font-weight: bold; }
+        .rank-3 { color: #cd7f32; font-weight: bold; }
+
+        .overlay-screen { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); flex-direction: column; justify-content: center; align-items: center; z-index: 10; backdrop-filter: blur(5px); }
+        .pause-btn { width: 200px; padding: 15px; margin: 8px 0; font-size: 18px; border-radius: 8px; text-align: center; }
+        #countdownText { font-size: 120px; color: #f1c40f; font-weight: bold; text-shadow: 0 0 20px rgba(241,196,15,0.8); }
+
+        .tab-btn { flex: 1; padding: 8px; font-size: 14px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; background: #555; color: white; }
+        .tab-btn.active { background: #3498db; }
+
+        @media (max-width: 720px) {
+            .panel { width: 100% !important; margin-left: 0; margin-right: 0; }
+            .game-wrap { width: 100%; height: auto; aspect-ratio: 2 / 3; }
+            canvas { width: 100%; height: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="topBar">
+        <div id="authPanel">
+            <div id="loginForm">
+                帳號(名稱): <input type="text" id="nameInp" placeholder="請輸入遊戲暱稱" style="width:140px;">
+                密碼: <input type="password" id="pwdInp" placeholder="至少6位數" style="width:110px;">
+                <button id="loginBtn" style="background:#3498db;">登入</button>
+                <button id="regBtn" style="background:#2ecc71;">註冊新帳號</button>
+            </div>
+            <div id="userInfo" style="display:none; font-weight:bold; font-size: 18px;">
+                玩家：<span id="playerName" style="color:#f1c40f;">載入中...</span>
+                <button id="logoutBtn" style="margin-left: 15px; background:#95a5a6;">登出</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel" style="width: 1000px;">
+        <div id="statusMsg" style="color: #3498db; font-size: 18px; font-weight: bold; text-align: center;">請選擇 .osz 或 .zip 歌曲檔</div>
+        <hr style="border: 0.5px solid #555; margin: 10px 0;">
+        <div class="controls" style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+            <label>歌曲檔: <input type="file" id="songFilesInput" accept=".osz,.zip" multiple></label>
+            <label>歌曲: <select id="songSelect" disabled><option>等待載入...</option></select></label>
+            <label>難度: <select id="difficultySelect" disabled><option>請先選擇歌曲...</option></select></label>
+            <label>速度: <input type="number" id="speedInput" min="1.0" max="15.0" step="0.1" value="5.0" style="width: 60px;"></label>
+            <button id="startBtn" disabled style="padding: 10px 20px; font-size: 16px;">開始遊戲</button>
+        </div>
+    </div>
+
+    <div class="flex-container">
+        <div class="panel side-panel">
+            <h3 style="color: #f1c40f; text-align: center;">操作說明</h3>
+            <div style="font-size: 14px; line-height: 1.6;">
+                <span style="color:#3498db; font-weight:bold;">基礎按鍵：</span> D、F、J、K<br>
+                <span style="color:#2ecc71; font-weight:bold;">長條音符：</span> 按住直到結束<br>
+                <span style="color:#9b59b6; font-weight:bold;">呼叫選單：</span> 遊戲中按 ESC<br>
+            </div>
+        </div>
+
+        <div class="game-wrap">
+            <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+            <div id="resultScreen" class="overlay-screen">
+                <h2 id="resTitle" style="color: #fff; font-size: 36px; margin-bottom: 10px;">CLEARED</h2>
+                <p id="uploadStatus" style="color:#f1c40f; font-size: 16px; margin: 0 20px 10px; text-align:center;"></p>
+                <div style="font-size: 24px; line-height: 1.5; width: 250px;">
+                    <div><span style="color: #f1c40f">PERFECT:</span> <span id="resPerfect" style="float:right;">0</span></div>
+                    <div><span style="color: #2ecc71">GOOD:</span> <span id="resGood" style="float:right;">0</span></div>
+                    <div><span style="color: #e67e22">BAD:</span> <span id="resBad" style="float:right;">0</span></div>
+                    <div><span style="color: #e74c3c">MISS:</span> <span id="resMiss" style="float:right;">0</span></div>
+                    <div><span style="color: #3498db">MAX COMBO:</span> <span id="resCombo" style="float:right;">0</span></div>
+                    <div style="margin-top: 10px; border-top: 2px solid #555; padding-top: 10px; font-weight:bold;">總分: <span id="resScore" style="float:right; color:#f1c40f;">0</span></div>
+                </div>
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button id="quitBtn" style="background:#95a5a6; color:#000;">回選單</button>
+                    <button id="retryBtn" style="background:#3498db; color:#fff;">再玩一次</button>
+                </div>
+            </div>
+
+            <div id="pauseScreen" class="overlay-screen">
+                <h2 style="color: #fff; font-size: 36px; margin-bottom: 30px; letter-spacing: 5px;">PAUSED</h2>
+                <button id="resumeBtn" class="pause-btn" style="background:#2ecc71; color:#fff;">▶ 繼續遊戲</button>
+                <button id="restartMenuBtn" class="pause-btn" style="background:#f1c40f; color:#000;">🔄 重新開始</button>
+                <button id="quitMenuBtn" class="pause-btn" style="background:#e74c3c; color:#fff;">⏹ 回到主選單</button>
+            </div>
+
+            <div id="countdownScreen" class="overlay-screen" style="background: rgba(0,0,0,0.5);">
+                <div id="countdownText">3</div>
+            </div>
+        </div>
+
+        <div class="panel side-panel" style="display: flex; flex-direction: column;">
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <button id="tabLocal" class="tab-btn active">本地排名</button>
+                <button id="tabNational" class="tab-btn">全國排名</button>
+            </div>
+            
+            <div id="leaderboardLocal" class="lb-container">
+                <div style="text-align:center; color:#777; margin-top: 50px;">請先選擇歌曲</div>
+            </div>
+            
+            <div id="leaderboardNational" class="lb-container" style="display: none;">
+                <div style="text-align:center; color:#777; margin-top: 50px;">請先選擇歌曲</div>
+            </div>
+        </div>
+    </div>
+
+    <audio id="bgm"></audio>
+
+<script>
+    // Firebase 設定
+    const firebaseConfig = {
+        apiKey: "AIzaSyDByhE28wBJ9t0CYOu0ZriMQumQZeyLec4",
+        authDomain: "rhythmgame-pc.firebaseapp.com",
+        databaseURL: "https://rhythmgame-pc-default-rtdb.asia-southeast1.firebasedatabase.app/",
+        projectId: "rhythmgame-pc",
+        storageBucket: "rhythmgame-pc.firebasestorage.app",
+        messagingSenderId: "525896963243",
+        appId: "1:525896963243:web:7b28144224adde08ab53ee",
+        measurementId: "G-2K5P1TKYKC"
+    };
+
+    try { firebase.initializeApp(firebaseConfig); } catch(e) { console.error("Firebase 初始化失敗:", e); }
+    
+    const auth = firebase.auth(); 
+    const db = firebase.database();
+    
+    let currentUser = null; 
+    let currentUserName = "Guest";
+
+    const songFilesInput = document.getElementById('songFilesInput');
+    const songSelect = document.getElementById('songSelect');
+    const difficultySelect = document.getElementById('difficultySelect');
+    const startBtn = document.getElementById('startBtn');
+    const statusMsg = document.getElementById('statusMsg');
+
+    let songLibrary = [];
+
+    function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[ch])); }
+    function getBaseName(filePath) { return String(filePath || '').split(/[\\/]/).pop(); }
+    function getMeta(text, key, fallback = '') { const match = text.match(new RegExp(`^${key}:\\s*(.+)$`, 'mi')); return match ? match[1].trim() : fallback; }
+
+    document.getElementById('regBtn').addEventListener('click', () => {
+        const name = document.getElementById('nameInp').value.trim(); 
+        const pwd = document.getElementById('pwdInp').value; 
+        if(!name || !pwd) return alert("請填寫完整帳號與密碼！");
+        if(pwd.length < 6) return alert("密碼長度至少需要 6 個字元！");
+        const simulatedEmail = name.toLowerCase() + "@game.local";
+        
+        auth.createUserWithEmailAndPassword(simulatedEmail, pwd)
+            .then((userCredential) => db.ref('users/' + userCredential.user.uid).set({ username: name }))
+            .then(() => alert("註冊成功並已自動登入！"))
+            .catch(err => {
+                if(err.code === "auth/email-already-in-use") alert("註冊失敗：這個帳號名稱已被註冊過了！");
+                else alert("註冊失敗：" + err.message);
+            });
+    });
+
+    document.getElementById('loginBtn').addEventListener('click', () => {
+        const name = document.getElementById('nameInp').value.trim(); 
+        const pwd = document.getElementById('pwdInp').value;
+        if(!name || !pwd) return alert("請填寫完整帳號與密碼！");
+        const simulatedEmail = name.toLowerCase() + "@game.local";
+        
+        auth.signInWithEmailAndPassword(simulatedEmail, pwd)
+            .then(() => alert("登入成功！"))
+            .catch(err => {
+                if(err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") alert("登入失敗：帳號或密碼錯誤！");
+                else alert("登入失敗：" + err.message);
+            });
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', () => { auth.signOut().then(() => alert("已登出")); });
+
+    auth.onAuthStateChanged(user => {
+        currentUser = user;
+        if (user) {
+            document.getElementById('loginForm').style.display = 'none'; 
+            document.getElementById('userInfo').style.display = 'block';
+            db.ref('users/' + user.uid).once('value').then(snap => { 
+                currentUserName = snap.val()?.username || "無名玩家"; 
+                document.getElementById('playerName').textContent = currentUserName; 
+            });
+        } else {
+            document.getElementById('loginForm').style.display = 'flex'; 
+            document.getElementById('userInfo').style.display = 'none'; 
+            currentUserName = "Guest";
+        }
+    });
+
+    songFilesInput.addEventListener('change', () => { loadSelectedSongs(songFilesInput.files); });
+
+    async function loadSelectedSongs(files) {
+        const selectedFiles = Array.from(files || []).filter(file => /\.(osz|zip)$/i.test(file.name));
+        songLibrary = []; songSelect.innerHTML = '<option>解析中...</option>'; songSelect.disabled = true; difficultySelect.disabled = true; startBtn.disabled = true;
+        if (selectedFiles.length === 0) { statusMsg.textContent = "請選擇檔案"; return; }
+        statusMsg.textContent = `解析中...`;
+
+        for (const file of selectedFiles) {
+            try {
+                const zip = await JSZip.loadAsync(await file.arrayBuffer());
+                const osuFiles = Object.values(zip.files).filter(entry => !entry.dir && entry.name.toLowerCase().endsWith('.osu'));
+                if (osuFiles.length === 0) continue;
+                const pack = { title: file.name.replace(/\.[^/.]+$/, ""), zip, difficulties: [] };
+                for (let i = 0; i < osuFiles.length; i++) {
+                    const text = await osuFiles[i].async("string");
+                    const version = getMeta(text, 'Version', 'Normal');
+                    const title = getMeta(text, 'TitleUnicode', getMeta(text, 'Title', pack.title));
+                    const audioFileName = getMeta(text, 'AudioFilename', '');
+                    if (i === 0) pack.title = title;
+                    pack.difficulties.push({ text, version, audioFileName });
+                }
+                songLibrary.push(pack);
+            } catch (err) {}
+        }
+        if (songLibrary.length === 0) { statusMsg.textContent = "無可用譜面"; return; }
+        statusMsg.innerHTML = `成功載入 ${songLibrary.length} 首歌曲`;
+        songSelect.innerHTML = songLibrary.map((pack, index) => `<option value="${index}">${escapeHtml(pack.title)}</option>`).join('');
+        songSelect.disabled = false; updateDiff();
+    }
+
+    function updateDiff() {
+        const pack = songLibrary[Number(songSelect.value)];
+        if (!pack) return;
+        difficultySelect.innerHTML = pack.difficulties.map((diff, index) => `<option value="${index}">${escapeHtml(diff.version)}</option>`).join('');
+        difficultySelect.disabled = false; startBtn.disabled = false; 
+        loadLeaderboards(); // 同步讀取兩種排行榜
+    }
+    songSelect.addEventListener('change', updateDiff); difficultySelect.addEventListener('change', loadLeaderboards);
+
+    // 【新增】排行榜切換邏輯與雙儲存系統
+    const tabLocal = document.getElementById('tabLocal');
+    const tabNational = document.getElementById('tabNational');
+    const lbLocal = document.getElementById('leaderboardLocal');
+    const lbNational = document.getElementById('leaderboardNational');
+
+    tabLocal.addEventListener('click', () => {
+        tabLocal.classList.add('active'); tabNational.classList.remove('active');
+        lbLocal.style.display = 'block'; lbNational.style.display = 'none';
+    });
+    tabNational.addEventListener('click', () => {
+        tabNational.classList.add('active'); tabLocal.classList.remove('active');
+        lbNational.style.display = 'block'; lbLocal.style.display = 'none';
+    });
+
+    function getSafeSongId() {
+        const pack = songLibrary[Number(songSelect.value)]; const diff = pack?.difficulties[Number(difficultySelect.value)];
+        if(!pack || !diff) return null;
+        return {
+            song: encodeURIComponent(pack.title).replace(/\./g, '_'),
+            diff: encodeURIComponent(diff.version).replace(/\./g, '_')
+        };
+    }
+
+    function loadLeaderboards() {
+        loadLocalLeaderboard();
+        loadNationalLeaderboard();
+    }
+
+    function loadLocalLeaderboard() {
+        const ids = getSafeSongId();
+        if(!ids) return;
+        const key = `${ids.song}_${ids.diff}`;
+        let localData = JSON.parse(localStorage.getItem('rhythmGame_localScores') || '{}');
+        let scores = localData[key] || [];
+        scores.sort((a, b) => b.score - a.score);
+        scores = scores.slice(0, 10);
+        
+        if(scores.length === 0) { lbLocal.innerHTML = '<div style="text-align:center; color:#777; margin-top: 50px;">本地尚無排名</div>'; return; }
+        lbLocal.innerHTML = scores.map((s, idx) => `<div class="rank-item"><span class="${idx===0?'rank-1':idx===1?'rank-2':idx===2?'rank-3':''}">#${idx+1} ${escapeHtml(s.name)}</span><span style="color:#3498db;font-weight:bold;">${s.score}</span></div>`).join('');
+    }
+
+    function loadNationalLeaderboard() {
+        const ids = getSafeSongId();
+        if(!ids) return;
+        lbNational.innerHTML = '<div style="text-align:center; color:#777; margin-top: 50px;">讀取中...</div>';
+        db.ref(`leaderboards/${ids.song}/${ids.diff}`).orderByChild('score').limitToLast(10).once('value', snap => {
+            const scores = []; snap.forEach(child => scores.push(child.val())); scores.reverse();
+            if(scores.length === 0) { lbNational.innerHTML = '<div style="text-align:center; color:#777; margin-top: 50px;">全國尚無排名</div>'; return; }
+            lbNational.innerHTML = scores.map((s, idx) => `<div class="rank-item"><span class="${idx===0?'rank-1':idx===1?'rank-2':idx===2?'rank-3':''}">#${idx+1} ${escapeHtml(s.name)}</span><span style="color:#3498db;font-weight:bold;">${s.score}</span></div>`).join('');
+        }).catch(() => { lbNational.innerHTML = '讀取失敗'; });
+    }
+
+    // 遊戲核心與時間軸變數
+    const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
+    const bgm = document.getElementById('bgm');
+    const resultScreen = document.getElementById('resultScreen');
+    const pauseScreen = document.getElementById('pauseScreen');
+    const countdownScreen = document.getElementById('countdownScreen');
+    const countdownText = document.getElementById('countdownText');
+
+    const keys = ['d', 'f', 'j', 'k'];
+    const laneWidth = 100; const hitY = 520;
+    let speed = 500; let health = 100; let score = 0; let combo = 0;
+    let stats = { perfect:0, good:0, bad:0, miss:0, maxCombo:0 };
+    
+    let gameState = 'idle'; 
+    let notes = []; let activeKeys = [false,false,false,false];
+    let animationFrameId = null; let currentObjectUrl = null;
+    let hitText = { text: '', time: 0, color: '' };
+    let hitEffects = []; let comboScale = 1; let audioCtx;
+    let countdownInterval = null;
+
+    let currentPlayTime = 0; 
+    let leadInTime = 2.5; 
+    let bgmStarted = false; 
+    let lastFrameTime = 0;
+
+    function initAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playHitSound(isHit) {
+        if (!audioCtx) return;
+        const time = audioCtx.currentTime; const gain = audioCtx.createGain(); gain.connect(audioCtx.destination);
+        if (isHit) {
+            const osc = audioCtx.createOscillator(); osc.type = 'triangle'; osc.frequency.setValueAtTime(250, time); osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.1);
+            gain.gain.setValueAtTime(0.6, time); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.1); osc.connect(gain); osc.start(time); osc.stop(time + 0.1);
+        } else {
+            const osc = audioCtx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, time); osc.frequency.linearRampToValueAtTime(40, time + 0.2);
+            gain.gain.setValueAtTime(0.3, time); gain.gain.linearRampToValueAtTime(0.01, time + 0.2); osc.connect(gain); osc.start(time); osc.stop(time + 0.2);
+        }
+    }
+
+    function pauseGame() {
+        if (gameState !== 'playing') return;
+        gameState = 'paused';
+        bgm.pause();
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        pauseScreen.style.display = 'flex';
+    }
+
+    function doCountdown(callback) {
+        gameState = 'countdown';
+        pauseScreen.style.display = 'none';
+        countdownScreen.style.display = 'flex';
+        let count = 3; countdownText.textContent = count;
+        if(countdownInterval) clearInterval(countdownInterval);
+        countdownInterval = setInterval(() => {
+            count--;
+            if (count > 0) countdownText.textContent = count;
+            else { clearInterval(countdownInterval); countdownScreen.style.display = 'none'; callback(); }
+        }, 1000);
+    }
+
+    function resumeGame() {
+        doCountdown(() => {
+            gameState = 'playing'; lastFrameTime = Date.now();
+            if (bgmStarted) bgm.play();
+            gameLoop();
+        });
+    }
+
+    document.getElementById('resumeBtn').addEventListener('click', resumeGame);
+    document.getElementById('restartMenuBtn').addEventListener('click', () => { pauseScreen.style.display = 'none'; startGame(); });
+    document.getElementById('quitMenuBtn').addEventListener('click', () => { pauseScreen.style.display = 'none'; quitToMenu(); });
+    document.getElementById('quitBtn').addEventListener('click', quitToMenu);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (gameState === 'playing') pauseGame();
+            else if (gameState === 'paused') resumeGame();
+            else if (resultScreen.style.display === 'flex') quitToMenu();
+            return;
+        }
+        if (gameState !== 'playing') return;
+        const idx = keys.indexOf(e.key.toLowerCase());
+        if (idx !== -1 && !activeKeys[idx]) { activeKeys[idx] = true; checkHit(idx); }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        const idx = keys.indexOf(e.key.toLowerCase());
+        if (idx !== -1) { activeKeys[idx] = false; checkRelease(idx); }
+    });
+
+    function quitToMenu() {
+        gameState = 'idle'; resultScreen.style.display = 'none'; pauseScreen.style.display = 'none';
+        ctx.clearRect(0,0,400,600); bgm.pause();
+        songFilesInput.disabled = false; startBtn.disabled = false; songSelect.disabled = false; difficultySelect.disabled = false;
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        loadLeaderboards();
+    }
+
+    function drawStaticBoard() {
+        ctx.clearRect(0,0,400,600); ctx.strokeStyle = '#444';
+        for(let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(i * laneWidth, 0); ctx.lineTo(i * laneWidth, 600); ctx.stroke(); }
+        ctx.fillStyle = 'rgba(231,76,60,0.5)'; ctx.fillRect(0, hitY - 20, 400, 40);
+        ctx.fillStyle = '#fff'; ctx.font = '20px Arial'; ctx.textAlign = 'left'; ctx.fillText(`Score: 0`, 10, 30);
+        ctx.fillStyle = '#2ecc71'; ctx.fillRect(10, 40, 100 * 3.8, 10);
+    }
+
+    async function startGame() {
+        const pack = songLibrary[Number(songSelect.value)]; const map = pack?.difficulties[Number(difficultySelect.value)];
+        if (!pack || !map) return;
+
+        if (gameState === 'playing' || gameState === 'paused') bgm.pause();
+        if (countdownInterval) clearInterval(countdownInterval);
+        
+        songFilesInput.disabled = true; startBtn.disabled = true; songSelect.disabled = true; difficultySelect.disabled = true;
+        resultScreen.style.display = 'none'; pauseScreen.style.display = 'none'; countdownScreen.style.display = 'none';
+        initAudio();
+
+        const entries = Object.values(pack.zip.files).filter(entry => !entry.dir);
+        const audioFile = entries.find(entry => getBaseName(entry.name).toLowerCase() === map.audioFileName.toLowerCase()) || entries.find(entry => /\.(mp3|ogg|wav)$/i.test(entry.name));
+        if (!audioFile) { alert("找不到音訊檔"); quitToMenu(); return; }
+
+        if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+        currentObjectUrl = URL.createObjectURL(await audioFile.async("blob"));
+        bgm.src = currentObjectUrl;
+        
+        notes = parseHitObjects(map.text);
+        if (notes.length === 0) { alert("無音符"); quitToMenu(); return; }
+
+        speed = parseFloat(document.getElementById('speedInput').value) * 100;
+        score = 0; combo = 0; health = 100; stats = { perfect:0, good:0, bad:0, miss:0, maxCombo:0 };
+        activeKeys = [false,false,false,false]; hitEffects = []; bgm.currentTime = 0;
+        
+        drawStaticBoard();
+
+        doCountdown(async () => {
+            gameState = 'playing';
+            bgmStarted = false; leadInTime = 2.5; lastFrameTime = Date.now(); currentPlayTime = -2.5;
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            gameLoop();
+        });
+    }
+
+    function parseHitObjects(osuText) {
+        const parsedNotes = []; let inHitObjects = false;
+        for (const rawLine of osuText.split(/\r?\n/)) {
+            const line = rawLine.trim();
+            if (line === '[HitObjects]') { inHitObjects = true; continue; }
+            if (!inHitObjects || !line || line.startsWith('//')) continue;
+            if (line.startsWith('[')) break;
+            const parts = line.split(','); if (parts.length < 4) continue;
+            const type = Number(parts[3]); const isLong = (type & 128) !== 0;
+            const startTime = Number(parts[2]) / 1000; const endTime = isLong && parts[5] ? Number(parts[5].split(':')[0]) / 1000 : startTime;
+            parsedNotes.push({ time: startTime, lane: Math.min(3, Math.max(0, Math.floor(Number(parts[0]) * 4 / 512))), active: true, isLong, endTime, isHolding: false, headHit: false });
+        }
+        return parsedNotes.sort((a, b) => a.time - b.time);
+    }
+
+    function gameLoop() {
+        if (gameState !== 'playing') return;
+        ctx.clearRect(0,0,400,600);
+        
+        if (!bgmStarted) {
+            let now = Date.now(); let dt = (now - lastFrameTime) / 1000; lastFrameTime = now; leadInTime -= dt;
+            currentPlayTime = -leadInTime;
+            if (leadInTime <= 0) { bgmStarted = true; bgm.play().catch(e => console.log(e)); currentPlayTime = bgm.currentTime; }
+        } else { currentPlayTime = bgm.currentTime; }
+
+        const cur = currentPlayTime; 
+
+        for(let i = 0; i < 4; i++) { if (activeKeys[i]) { ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'; ctx.fillRect(i * laneWidth, hitY, laneWidth, 80); } }
+        ctx.strokeStyle = '#444'; for(let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(i * laneWidth, 0); ctx.lineTo(i * laneWidth, 600); ctx.stroke(); }
+        ctx.fillStyle = 'rgba(231,76,60,0.5)'; ctx.fillRect(0, hitY - 20, 400, 40);
+
+        let finished = true;
+        
+        notes.forEach(note => {
+            if (!note.active) return;
+            finished = false; const y = hitY - (note.time - cur) * speed;
+
+            if (note.isLong) {
+                const yEnd = hitY - (note.endTime - cur) * speed; const yStart = note.headHit && y > hitY ? hitY : y;
+                ctx.fillStyle = note.isHolding ? '#2ecc71' : '#27ae60';
+                if (yStart > yEnd) ctx.fillRect(note.lane * laneWidth + 25, yEnd, 50, yStart - yEnd);
+            }
+
+            if (!note.headHit && y > -50 && y < 650) {
+                ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.roundRect(note.lane * laneWidth + 20, y - 20, 60, 40, 10); ctx.fill();
+            }
+
+            if (cur - note.time > 0.2 && !note.isLong) { note.active = false; doMiss(); } 
+            else if (note.isLong && !note.headHit && cur - note.time > 0.2) { note.headHit = true; doMiss(); } 
+            else if (note.isLong && note.active && cur > note.endTime) { note.active = false; if(note.isHolding) stats.perfect++; }
+        });
+
+        for (let i = hitEffects.length - 1; i >= 0; i--) {
+            let eff = hitEffects[i]; eff.radius += 4; eff.alpha -= 0.06;
+            if (eff.alpha <= 0) { hitEffects.splice(i, 1); continue; }
+            ctx.beginPath(); ctx.arc(eff.x, eff.y, eff.radius, 0, Math.PI * 2); ctx.strokeStyle = `rgba(${eff.r}, ${eff.g}, ${eff.b}, ${eff.alpha})`; ctx.lineWidth = 4; ctx.stroke();
+        }
+
+        ctx.fillStyle = '#fff'; ctx.font = '20px Arial'; ctx.textAlign = 'left'; ctx.fillText(`Score: ${score}`, 10, 30);
+        ctx.fillStyle = '#2ecc71'; ctx.fillRect(10, 40, health * 3.8, 10);
+        
+        if (combo > 2) {
+            comboScale = Math.max(1, comboScale - 0.05); ctx.fillStyle = '#3498db'; ctx.font = `bold ${30 * comboScale}px Arial`; ctx.textAlign = 'center'; ctx.fillText(`${combo} COMBO`, 200, 100);
+        }
+
+        if (Date.now() - hitText.time < 400) {
+            let elapsed = Date.now() - hitText.time; let floatY = hitY - 80 - (elapsed * 0.08);
+            ctx.fillStyle = hitText.color; ctx.globalAlpha = 1 - (elapsed / 400); ctx.font = 'bold 36px Arial'; ctx.textAlign = 'center'; ctx.fillText(hitText.text, 200, floatY); ctx.globalAlpha = 1.0;
+        }
+
+        if (finished && bgmStarted && bgm.ended) showResults(false);
+        else animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function checkHit(lane) {
+        const cur = currentPlayTime; 
+        const note = notes.find(item => item.lane === lane && item.active && Math.abs(item.time - cur) < 0.2);
+        if (note) {
+            playHitSound(true); const diff = Math.abs(note.time - cur);
+            if (note.isLong) { note.isHolding = true; note.headHit = true; } else { note.active = false; }
+            let effectColor = {r: 255, g: 255, b: 255};
+
+            if (diff < 0.08) { score += 300; combo++; stats.perfect++; health = Math.min(100, health + 2); hitText = { text: 'PERFECT', time: Date.now(), color: '#f1c40f' }; effectColor = {r: 241, g: 196, b: 15}; } 
+            else if (diff < 0.15) { score += 100; combo++; stats.good++; health = Math.min(100, health + 1); hitText = { text: 'GOOD', time: Date.now(), color: '#2ecc71' }; effectColor = {r: 46, g: 204, b: 113}; } 
+            else { score += 50; combo = 0; stats.bad++; health -= 5; hitText = { text: 'BAD', time: Date.now(), color: '#e67e22' }; effectColor = {r: 230, g: 126, b: 34}; }
+            
+            if(combo > stats.maxCombo) stats.maxCombo = combo; comboScale = 1.4;
+            hitEffects.push({ x: lane * laneWidth + 50, y: hitY, radius: 15, alpha: 1, r: effectColor.r, g: effectColor.g, b: effectColor.b });
+            if(health <= 0) showResults(true);
+        } else { playHitSound(false); }
+    }
+
+    function checkRelease(lane) {
+        const note = notes.find(item => item.lane === lane && item.active && item.isLong && item.isHolding);
+        if (note) {
+            note.isHolding = false;
+            if(note.endTime - currentPlayTime > 0.1) { combo = 0; health -= 10; hitText = { text: 'MISS', time: Date.now(), color: '#e74c3c' }; if(health <= 0) showResults(true); }
+        }
+    }
+
+    function doMiss() { combo = 0; stats.miss++; health -= 8; hitText = { text: 'MISS', time: Date.now(), color: '#e74c3c' }; if(health <= 0) showResults(true); }
+
+    function showResults(fail = false) {
+        if (gameState === 'idle' && resultScreen.style.display === 'flex') return;
+        gameState = 'idle'; bgm.pause(); if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        resultScreen.style.display = 'flex';
+        document.getElementById('resPerfect').textContent = stats.perfect; document.getElementById('resGood').textContent = stats.good;
+        document.getElementById('resBad').textContent = stats.bad; document.getElementById('resMiss').textContent = stats.miss;
+        document.getElementById('resCombo').textContent = stats.maxCombo; document.getElementById('resScore').textContent = score;
+
+        const title = document.getElementById('resTitle'); const uploadMsg = document.getElementById('uploadStatus');
+        if (fail) { title.textContent = "FAILED"; title.style.color = "#e74c3c"; uploadMsg.textContent = "遊戲失敗，成績不會上傳"; uploadMsg.style.color = "#e74c3c"; return; }
+
+        title.textContent = "CLEARED"; title.style.color = "#2ecc71";
+        
+        // 【新增】只要過關且有分數，就強制儲存至本地排名
+        if (score > 0) {
+            const ids = getSafeSongId();
+            if (ids) {
+                const key = `${ids.song}_${ids.diff}`;
+                let localData = JSON.parse(localStorage.getItem('rhythmGame_localScores') || '{}');
+                if (!localData[key]) localData[key] = [];
+                // 如果沒登入，名稱就抓輸入框的，都沒有就叫 Guest
+                const finalName = currentUser ? currentUserName : (document.getElementById('nameInp').value.trim() || 'Guest');
+                localData[key].push({ name: finalName, score: score, maxCombo: stats.maxCombo, date: new Date().toISOString() });
+                localStorage.setItem('rhythmGame_localScores', JSON.stringify(localData));
+            }
+        }
+
+        // 處理雲端全國排名上傳
+        if (currentUser && score > 0) {
+            uploadMsg.textContent = "正在上傳成績至雲端..."; uploadMsg.style.color = "#f1c40f";
+            const ids = getSafeSongId();
+            db.ref(`leaderboards/${ids.song}/${ids.diff}`).push({ name: currentUserName, score, maxCombo: stats.maxCombo, date: new Date().toISOString() })
+              .then(() => { uploadMsg.textContent = "成績上傳成功！"; uploadMsg.style.color = "#2ecc71"; loadLeaderboards(); })
+              .catch(err => { uploadMsg.textContent = "上傳失敗：" + err.message; uploadMsg.style.color = "#e74c3c"; });
+        } else if (!currentUser) { 
+            uploadMsg.textContent = "成績已保存至本地，登入帳號可參與全國排名！"; uploadMsg.style.color = "#f1c40f"; 
+        } else { 
+            uploadMsg.textContent = "分數為 0，未上傳"; uploadMsg.style.color = "#f1c40f"; 
+        }
+    }
+
+    startBtn.addEventListener('click', () => { if(gameState === 'idle') startGame(); });
+</script>
+</body>
+</html>
