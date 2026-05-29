@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MyHomework — 一頁式入口</title>
+  <style>
+    :root{--bg:#0b1220;--card:#071029;--muted:#9aa9bf;--accent:#60a5fa}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter, 'Noto Sans TC', system-ui, -apple-system, 'Segoe UI', Roboto;background:linear-gradient(180deg,#020617,#07102a);color:#eaf3ff;padding:28px}
+    .wrap{max-width:1100px;margin:0 auto}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:52px;height:52px;border-radius:10px;background:linear-gradient(135deg,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center;font-weight:700;color:white}
+    h1{margin:0;font-size:1.5rem}
+    .controls{display:flex;gap:8px;align-items:center}
+    .btn{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.04);color:var(--accent);padding:8px 12px;border-radius:10px;text-decoration:none;font-weight:600}
+    .search{padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.02);color:inherit}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-top:18px}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:16px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+    .card h3{margin:0 0 8px 0}
+    .meta{font-size:0.9rem;color:var(--muted)}
+    .links{display:flex;gap:8px;margin-top:12px}
+    a.link{background:rgba(255,255,255,0.02);padding:6px 10px;border-radius:8px;color:var(--accent);text-decoration:none;font-weight:600}
+    .small{font-size:0.85rem;color:var(--muted)}
+    footer{margin-top:20px;text-align:center;color:var(--muted)}
+    @media (max-width:640px){header{flex-direction:column;align-items:flex-start}.controls{width:100%;justify-content:space-between}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">MH</div>
+        <div>
+          <h1>myhomework — 一頁式入口</h1>
+          <div class="small">集中展示 _wp/myhomework 內所有專案</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <input id="q" class="search" placeholder="搜尋專案或資料夾..." />
+        <a id="setRepo" class="btn">設定 GitHub 儲存庫</a>
+        <a id="openRepo" class="btn" href="#" target="_blank">開啟儲存庫</a>
+      </div>
+    </header>
+
+    <main>
+      <div id="grid" class="grid" aria-live="polite"></div>
+      <div style="margin-top:12px" class="small">提示：點選 <strong>Local</strong> 以開啟本機檔案（相對路徑），點選 <strong>GitHub</strong> 將在 GitHub 上開啟對應資料夾（需先設定儲存庫）。</div>
+    </main>
+
+    <footer>自動生成：2026-05-29 · 如需加入 README 摘要或自動抓取分支，告訴我。</footer>
+  </div>
+
+  <script>
+    (function(){
+      const projects = [
+        {name:'01', title:'01', desc:'個人簡介'},
+        {name:'02', title:'02', desc:'表單練習'},
+        {name:'03', title:'03', desc:'JS 練習集'},
+        {name:'04', title:'04', desc:'blog 範例'},
+        {name:'05', title:'05', desc:'blog 範例'},
+        {name:'07', title:'07', desc:'JS 練習集'},
+        {name:'08', title:'08', desc:'JS 練習集'},
+        {name:'js', title:'js', desc:'共用腳本'},
+        {name:'mid exam', title:'mid exam', desc:'期中考練習'},
+        {name:'總共.zip', title:'總共.zip', desc:'整包下載'}
+      ];
+
+      const storageKey = 'myhomework_github_repo';
+      const q = document.getElementById('q');
+      const grid = document.getElementById('grid');
+      const setRepo = document.getElementById('setRepo');
+      const openRepo = document.getElementById('openRepo');
+
+      function sanitize(url){ try{ if(!url) return null; const u=new URL(url); return u.href.replace(/\/$/,''); }catch(e){return null} }
+      function repoInfo(url){ try{
+          const u = new URL(url);
+          const segs = u.pathname.split('/').filter(Boolean);
+          const info = {root:u.protocol + '//' + u.host, branch:'master'};
+          if(segs.length >= 2){ info.root += '/' + segs[0] + '/' + segs[1]; }
+          if(segs[2] === 'tree' || segs[2] === 'blob'){ info.branch = segs[3] || info.branch; }
+          return info;
+      }catch(e){return {root:url, branch:'master'}} }
+      let repo = sanitize(new URLSearchParams(location.search).get('github')) || sanitize(localStorage.getItem(storageKey));
+      let repoInfoData = repo ? repoInfo(repo) : null;
+      function updateOpenRepo(){ if(repoInfoData){ openRepo.href = repoInfoData.root; openRepo.textContent = 'Open: ' + repoInfoData.root.replace('https://','').replace('http://',''); } else { openRepo.href = '#'; openRepo.textContent = '開啟儲存庫'; }}
+      updateOpenRepo();
+
+      setRepo.addEventListener('click', ()=>{
+        const input = prompt('請輸入 GitHub 儲存庫網址（例如 https://github.com/username/repo）', repo||'');
+        const s = sanitize(input);
+        if(s){ localStorage.setItem(storageKey,s); repo = s; repoInfoData = repoInfo(s); updateOpenRepo(); alert('已儲存：' + s); }
+      });
+
+      function render(list){ grid.innerHTML = ''; list.forEach(p=>{
+        const el = document.createElement('div'); el.className='card';
+        const title = document.createElement('h3'); title.textContent = p.title; el.appendChild(title);
+        const md = document.createElement('div'); md.className='meta'; md.textContent = p.desc; el.appendChild(md);
+        const links = document.createElement('div'); links.className='links';
+        const local = document.createElement('a'); local.className='link'; local.textContent='Local';
+        // local link: folder or file
+        local.href = encodeURI(p.name) + (p.name.includes('.') ? '' : '/');
+        links.appendChild(local);
+
+        const gh = document.createElement('a'); gh.className='link'; gh.textContent='GitHub'; gh.href='#';
+        gh.addEventListener('click', (e)=>{ e.preventDefault(); if(!repoInfoData){ const s = prompt('請輸入 GitHub 儲存庫網址（例如 https://github.com/username/repo）'); const ss = sanitize(s); if(!ss) return; localStorage.setItem(storageKey,ss); repo = ss; repoInfoData = repoInfo(ss); updateOpenRepo(); }
+          const url = repoInfoData.root + '/tree/' + repoInfoData.branch + '/myhomework/' + encodeURIComponent(p.name);
+          window.open(url,'_blank');
+        });
+        links.appendChild(gh);
+
+        if(p.name.endsWith('.zip')){
+          // show download
+          const dl = document.createElement('a'); dl.className='link'; dl.textContent='下載'; dl.href = encodeURI(p.name); links.appendChild(dl);
+        }
+
+        el.appendChild(links);
+        grid.appendChild(el);
+      }) }
+
+      q.addEventListener('input', ()=>{ const v=q.value.toLowerCase(); render(projects.filter(p=>p.name.toLowerCase().includes(v)||p.title.toLowerCase().includes(v)||p.desc.toLowerCase().includes(v))) });
+
+      // initial render
+      render(projects);
+    })();
+  </script>
+</body>
+</html>
